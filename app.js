@@ -1,3 +1,7 @@
+// Global fallback references for Firebase services
+var auth = (typeof window !== "undefined" && window.auth) ? window.auth : (typeof auth !== "undefined" ? auth : null);
+var db = (typeof window !== "undefined" && window.db) ? window.db : (typeof db !== "undefined" ? db : null);
+
 const KEY = "hisab_guideline_v1";
 
 let state = JSON.parse(localStorage.getItem(KEY) || "null") || {
@@ -6085,18 +6089,27 @@ if (
 const authScreenEl =
     document.getElementById("authScreen");
 
-if (authScreenEl) {
-    authScreenEl.classList.add("hidden");
+function showAuthFallback() {
+    if (authScreenEl) {
+        authScreenEl.classList.remove("hidden");
+    }
+    if (typeof showLogin === "function") {
+        showLogin();
+    }
 }
 
-if (auth && typeof auth.setPersistence === "function") {
+if (typeof auth !== "undefined" && auth && typeof auth.setPersistence === "function") {
     auth.setPersistence(firebase.auth.Auth.Persistence.SESSION)
         .catch(function (err) {
-            console.error("Failed to set auth persistence:", err);
+            console.warn("Failed to set auth persistence:", err);
         });
 }
 
-if (auth && typeof auth.onAuthStateChanged === "function") {
+if (typeof auth !== "undefined" && auth && typeof auth.onAuthStateChanged === "function") {
+
+    if (authScreenEl) {
+        authScreenEl.classList.add("hidden");
+    }
 
     auth.onAuthStateChanged(async function (firebaseUser) {
 
@@ -6106,10 +6119,7 @@ if (auth && typeof auth.onAuthStateChanged === "function") {
            that we actually know it's the right screen to show.
         */
         if (!firebaseUser) {
-            if (authScreenEl) {
-                authScreenEl.classList.remove("hidden");
-            }
-            showLogin();
+            showAuthFallback();
             return;
         }
 
@@ -6128,79 +6138,72 @@ if (auth && typeof auth.onAuthStateChanged === "function") {
         }
 
         try {
+            if (typeof db !== "undefined" && db) {
+                const userDoc =
+                    await db.collection("users")
+                        .doc(firebaseUser.uid)
+                        .get();
 
-            const userDoc =
-                await db.collection("users")
-                    .doc(firebaseUser.uid)
-                    .get();
-
-            if (!userDoc.exists) {
-                if (authScreenEl) {
-                    authScreenEl.classList.remove("hidden");
+                if (!userDoc.exists) {
+                    showAuthFallback();
+                    return;
                 }
-                showLogin();
-                return;
-            }
 
-            const userData =
-                userDoc.data();
+                const userData =
+                    userDoc.data();
 
-            if (userData.messCode) {
-                state.messCode = userData.messCode;
-                localStorage.setItem("messCode", userData.messCode);
+                if (userData.messCode) {
+                    state.messCode = userData.messCode;
+                    localStorage.setItem("messCode", userData.messCode);
+                } else {
+                    console.error(
+                        "Session restore: user profile has no messCode."
+                    );
+
+                    alert(
+                        "This account isn't linked to any mess yet. " +
+                        "Please contact support or create a new mess."
+                    );
+
+                    if (typeof auth !== "undefined" && auth && typeof auth.signOut === "function") {
+                        auth.signOut();
+                    }
+
+                    showAuthFallback();
+                    return;
+                }
+
+                state.user = {
+                    uid: firebaseUser.uid,
+                    name: userData.name || "",
+                    phone: userData.phone || "",
+                    email: userData.email || "",
+                    birthday: userData.birthday || "",
+                    photo: userData.photo || null
+                };
+
+                await loadMessData();
+
+                console.log("SESSION RESTORED");
+
+                if (!state.members.includes(state.user.name)) {
+                    state.members.unshift(state.user.name);
+                }
+
+                state.memberPhones[state.user.name] =
+                    state.user.phone;
+
+                save();
+
+                openApp();
             } else {
-                console.error(
-                    "Session restore: user profile has no messCode."
-                );
-
-                alert(
-                    "This account isn't linked to any mess yet. " +
-                    "Please contact support or create a new mess."
-                );
-
-                if (auth && typeof auth.signOut === "function") {
-                    auth.signOut();
-                }
-
-                if (authScreenEl) {
-                    authScreenEl.classList.remove("hidden");
-                }
-                showLogin();
-                return;
+                showAuthFallback();
             }
-
-            state.user = {
-                uid: firebaseUser.uid,
-                name: userData.name || "",
-                phone: userData.phone || "",
-                email: userData.email || "",
-                birthday: userData.birthday || "",
-                photo: userData.photo || null
-            };
-
-            await loadMessData();
-
-            console.log("SESSION RESTORED");
-
-            if (!state.members.includes(state.user.name)) {
-                state.members.unshift(state.user.name);
-            }
-
-            state.memberPhones[state.user.name] =
-                state.user.phone;
-
-            save();
-
-            openApp();
 
         } catch (err) {
 
             console.error("Failed to restore session on refresh:", err);
-
-            if (authScreenEl) {
-                authScreenEl.classList.remove("hidden");
-            }
-            showLogin();
+            showAuthFallback();
         }
     });
 
@@ -6208,11 +6211,9 @@ if (auth && typeof auth.onAuthStateChanged === "function") {
 
     /*
        Firebase auth isn't available at all -> fall back to
-       showing the login screen rather than leaving it hidden.
+       showing the login screen immediately rather than leaving it hidden.
     */
-    if (authScreenEl) {
-        authScreenEl.classList.remove("hidden");
-    }
+    showAuthFallback();
 }
 
 /* =========================================================
