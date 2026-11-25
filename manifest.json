@@ -1,0 +1,23 @@
+{
+  "name": "Hisab - Mess Accounts & Meal Management",
+  "short_name": "Hisab",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f766e",
+  "theme_color": "#0f766e",
+  "description": "Smart Mess Accounts & Meal Management System",
+  "icons": [
+    {
+      "src": "assets/bg.jpg",
+      "sizes": "192x192",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "assets/bg.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ]
+}

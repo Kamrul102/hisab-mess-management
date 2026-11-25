@@ -1,0 +1,143 @@
+rules_version = '2';
+
+/**
+ * Cloud Firestore Security Rules for Hisab (Mess Management Application)
+ *
+ * Security Model:
+ * 1. Default Deny: All collections and paths not explicitly allowed are blocked.
+ * 2. Insecure Test / Open Rules Removed: Removed open test and open messes rules.
+ * 3. User Document Isolation:
+ *    - /users/{uid}: Only the authenticated account owner (request.auth.uid == uid)
+ *      can read or write their own user profile document.
+ *    - Listing the users collection is strictly denied to protect user PII (emails/phones).
+ * 4. Mess Management Access Control:
+ *    - /messes/{messCode}: Single-document get is permitted for verification during
+ *      signup/join and for members. Collection-level listing is disabled.
+ *    - Creation requires an authenticated user with valid schema.
+ *    - Updates require membership in the mess (profile points to messCode or mid-join).
+ *    - Deletion is disabled to protect shared mess accounting records.
+ */
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    // HELPER FUNCTIONS
+    // =========================================================================
+
+    function isAuthenticated() {
+      return request.auth != null && request.auth.uid != null;
+    }
+
+    function isOwner(uid) {
+      return isAuthenticated() && request.auth.uid == uid;
+    }
+
+    function userDocExists(uid) {
+      return exists(/databases/$(database)/documents/users/$(uid));
+    }
+
+    function getUserMessCode(uid) {
+      return get(/databases/$(database)/documents/users/$(uid)).data.messCode;
+    }
+
+    function userBelongsToMess(messCode) {
+      return isAuthenticated() && (
+        // Existing member: profile document links to this mess
+        (userDocExists(request.auth.uid) && getUserMessCode(request.auth.uid) == messCode) ||
+        // Joining member: account just registered, profile doc not yet committed
+        !userDocExists(request.auth.uid)
+      );
+    }
+
+    // =========================================================================
+    // VALIDATORS
+    // =========================================================================
+
+    function isValidUserDoc(data, uid) {
+      return data.keys().hasOnly([
+        'uid', 'name', 'phone', 'email', 'birthday', 'photo', 'messCode', 'createdAt', 'updatedAt'
+      ]) &&
+      (!('uid' in data) || (data.uid is string && data.uid == uid)) &&
+      (!('name' in data) || (data.name is string && data.name.size() <= 100)) &&
+      (!('phone' in data) || (data.phone is string && data.phone.size() <= 30)) &&
+      (!('email' in data) || (data.email is string && data.email.size() <= 120)) &&
+      (!('birthday' in data) || (data.birthday is string && data.birthday.size() <= 30)) &&
+      (!('photo' in data) || data.photo == null || (data.photo is string && data.photo.size() <= 500000)) &&
+      (!('messCode' in data) || (data.messCode is string && data.messCode.size() <= 50)) &&
+      (!('createdAt' in data) || data.createdAt is timestamp) &&
+      (!('updatedAt' in data) || data.updatedAt is timestamp);
+    }
+
+    function isValidMessDoc(data, messCode) {
+      return data.keys().hasOnly([
+        'messCode', 'manager', 'managerPhone', 'managerRole', 'managerPin',
+        'managerUnlocked', 'members', 'memberPhones', 'meals', 'entries',
+        'history', 'notices', 'menu', 'menuOptions', 'language', 'mealTimes',
+        'privacy', 'user', 'verification', 'updatedAt', 'createdAt'
+      ]) &&
+      // Document code must match route ID
+      (data.messCode is string && data.messCode == messCode && data.messCode.size() >= 3 && data.messCode.size() <= 32) &&
+      (!('manager' in data) || (data.manager is string && data.manager.size() <= 100)) &&
+      (!('managerPhone' in data) || (data.managerPhone is string && data.managerPhone.size() <= 30)) &&
+      (!('managerRole' in data) || data.managerRole is bool) &&
+      (!('managerPin' in data) || data.managerPin == null || (data.managerPin is string && data.managerPin.size() <= 128)) &&
+      (!('managerUnlocked' in data) || data.managerUnlocked is bool) &&
+      (!('members' in data) || (data.members is list && data.members.size() <= 200)) &&
+      (!('memberPhones' in data) || data.memberPhones is map) &&
+      (!('meals' in data) || data.meals is map) &&
+      (!('entries' in data) || (data.entries is list && data.entries.size() <= 5000)) &&
+      (!('history' in data) || (data.history is list && data.history.size() <= 5000)) &&
+      (!('notices' in data) || (data.notices is list && data.notices.size() <= 100)) &&
+      (!('menu' in data) || data.menu is map) &&
+      (!('menuOptions' in data) || (data.menuOptions is list && data.menuOptions.size() <= 100)) &&
+      (!('language' in data) || (data.language is string && data.language.size() <= 10)) &&
+      (!('mealTimes' in data) || data.mealTimes is map) &&
+      (!('privacy' in data) || (data.privacy is string || data.privacy is bool || data.privacy is map)) &&
+      (!('user' in data) || data.user == null || data.user is map) &&
+      (!('verification' in data) || data.verification == null || data.verification is map) &&
+      (!('updatedAt' in data) || data.updatedAt is timestamp) &&
+      (!('createdAt' in data) || data.createdAt is timestamp);
+    }
+
+    // =========================================================================
+    // USERS COLLECTION
+    // =========================================================================
+    match /users/{uid} {
+      // Authenticated users can only read their own profile
+      allow get: if isOwner(uid);
+      allow list: if false;
+
+      // Authenticated users can create their own profile
+      allow create: if isOwner(uid) && isValidUserDoc(request.resource.data, uid);
+
+      // Authenticated users can update only their own profile; immutable uid
+      allow update: if isOwner(uid) && isValidUserDoc(request.resource.data, uid) &&
+                    (!('uid' in resource.data) || !('uid' in request.resource.data) || request.resource.data.uid == resource.data.uid);
+
+      // Account deletion by owner
+      allow delete: if isOwner(uid);
+    }
+
+    // =========================================================================
+    // MESSES COLLECTION
+    // =========================================================================
+    match /messes/{messCode} {
+      // Document fetch permitted for members and for checking code existence before registration
+      allow get: if true;
+      // Prohibit collection scanning/listing
+      allow list: if false;
+
+      // New mess creation by authenticated users
+      allow create: if isAuthenticated() && isValidMessDoc(request.resource.data, messCode);
+
+      // Mess updates restricted to members belonging to this mess; immutable messCode
+      allow update: if userBelongsToMess(messCode) &&
+                    isValidMessDoc(request.resource.data, messCode) &&
+                    request.resource.data.messCode == resource.data.messCode;
+
+      // Mess deletion is disabled to prevent accidental data loss
+      allow delete: if false;
+    }
+  }
+}

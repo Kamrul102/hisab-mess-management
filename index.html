@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hisab - Mess Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0f766e">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+<div id="authScreen" class="auth-page">
+    <div class="auth-shell">
+
+        <div class="auth-brand-panel">
+            <div class="brand-mark">📖</div>
+            <h1>হিসাব</h1>
+            <p>Smart Mess Accounts & Meal Management</p>
+
+            <div class="brand-points">
+                <span>✓</span> Manage meals easily
+            </div>
+
+            <div class="brand-points">
+                <span>✓</span> Track expenses & balances
+            </div>
+
+            <div class="brand-points">
+                <span>✓</span> Secure member access
+            </div>
+        </div>
+
+        <div class="auth-card">
+            <div id="loginForm">
+
+                <h2>Log in</h2>
+
+                <p class="auth-sub">
+                    Welcome back. Please enter your details.
+                </p>
+
+                <label>Phone number or Gmail</label>
+                <input
+                    id="loginIdentity"
+                    type="text"
+                    placeholder="Phone number or email"
+                >
+
+                <label>Password</label>
+                <input
+                    id="loginPassword"
+                    type="password"
+                    placeholder="Password"
+                >
+
+                <div style="display:flex;justify-content:flex-end;margin:-6px 0 12px;">
+                    <button
+                        type="button"
+                        class="auth-link-btn"
+                        onclick="forgotPassword()"
+                        style="background:none;border:none;color:#5b6cff;font-weight:600;cursor:pointer;padding:0;font-size:14px;"
+                    >
+                        Forgot password?
+                    </button>
+                </div>
+
+                <button
+                    class="btn btn-primary auth-main-btn"
+                    onclick="login()"
+                >
+                    Log In
+                </button>
+
+                <div class="or-line">
+                    <span>or</span>
+                </div>
+
+                <button
+                    class="social-btn"
+                    onclick="showCreate()"
+                >
+                    Create new account
+                </button>
+
+                <button
+                    type="button"
+                    class="social-btn"
+                    style="margin-top:10px;background:#f0fdf4;border:1.5px solid #86efac;color:#166534;font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px"
+                    onclick="startDemoMode()"
+                >
+                    🚀 Try Live Demo (লগইন ছাড়া ডেমো দেখুন)
+                </button>
+
+                <div class="auth-footer">
+                    By continuing, you agree to our Terms and Privacy Policy.
+                </div>
+
+            </div>
+
+            <div id="createForm" class="hidden">
+                <div class="create-avatar-wrap">
+                    <label for="createPhoto" class="create-avatar" title="Choose profile picture">
+                        <span id="createAvatarIcon"></span>
+                        <img id="createAvatarPreview" class="hidden" alt="Profile picture preview">
+                        <span class="create-avatar-edit">✎</span>
+                    </label>
+                    <input id="createPhoto" type="file" accept="image/*" hidden onchange="previewCreatePhoto(event)">
+                </div>
+                <h2>Create account</h2>
+                <p class="auth-sub">It’s quick and easy to create your account.</p>
+                <div class="name-row">
+                    <div><label>Full name</label><input id="createName" type="text" placeholder="Full name"></div>
+                    <div><label>Birthday</label><input id="createBirthday" type="date"></div>
+                </div>
+                <label>Mobile number</label>
+                <input id="createPhone" type="tel" placeholder="01XXXXXXXXX">
+                <label>Gmail</label>
+                <input id="createEmail" type="email" placeholder="example@gmail.com">
+                <label>Password</label>
+                <input id="createPassword" type="password" placeholder="New password">
+                <label>Confirm password</label>
+                <input id="createConfirm" type="password" placeholder="Confirm password">
+                <div class="mess-mode-row" style="display:flex;gap:16px;margin:14px 0 4px">
+                    <label style="display:flex;align-items:center;gap:6px;font-weight:600;cursor:pointer">
+                        <input id="messModeCreate" type="radio" name="messMode" value="create" checked onchange="setMessMode('create')">
+                        Create New Mess
+                    </label>
+                    <label style="display:flex;align-items:center;gap:6px;font-weight:600;cursor:pointer">
+                        <input id="messModeJoin" type="radio" name="messMode" value="join" onchange="setMessMode('join')">
+                        Join Existing Mess
+                    </label>
+                </div>
+                <div id="joinMessCodeRow" class="hidden">
+                    <label>Mess Code</label>
+                    <input id="joinMessCode" type="text" placeholder="e.g. MESS-2RW46Q" style="text-transform:uppercase">
+                </div>
+                <p class="small-note">Use a valid phone number and Gmail. A verification code will be required.</p>
+                <button class="btn btn-primary auth-main-btn" onclick="startVerification()">Send Verification Code</button>
+                <div id="verificationBox" class="verification-box hidden">
+                    <label>6-digit verification code</label>
+                    <input id="verificationCode" type="text" inputmode="numeric" maxlength="6" placeholder="Enter code">
+                    <button class="btn btn-accent auth-main-btn" onclick="verifyAndCreate()">Verify & Create Account</button>
+                    <small id="verificationHint"></small>
+                </div>
+
+                <div class="or-line">
+                    <span>or</span>
+                </div>
+
+                <button type="button" class="social-btn" onclick="showLogin()">
+                    Back to log in
+                </button>
+
+                <div class="auth-footer">By creating an account, you agree to our Terms and Privacy Policy.</div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+    <div id="app" class="app hidden">
+        <div id="copyToast" class="copy-toast" aria-live="polite">Copied!</div>
+
+        <div class="app-shell">
+
+            <!-- SIDEBAR -->
+            <aside id="appSidebar" class="app-sidebar collapsed">
+
+                <!-- MINI / DEFAULT PROFILE -->
+                <div class="sidebar-profile">
+                    <div class="sidebar-avatar-wrap">
+                        <div class="profile">
+                            <div class="avatar" id="sidebarAvatar">K</div>
+                        </div>
+                        <button class="sidebar-avatar-edit" type="button" onclick="document.getElementById('profilePhotoInput').click()" aria-label="Change profile picture">✎</button>
+                    </div>
+
+                    <div class="profile-name" id="sidebarUserName">Kamrul Hassan</div>
+                    <div class="sidebar-profile-sub">Mess Member</div>
+
+                    <div class="sidebar-quick-fields">
+                        <div class="sidebar-pill" id="sidebarPhonePill">
+                            <span class="sidebar-pill-icon">☎</span>
+                            <span class="sidebar-pill-text">Phone</span>
+                        </div>
+                        <div class="sidebar-pill" id="sidebarGmailPill">
+                            <span class="sidebar-pill-icon">✉</span>
+                            <span class="sidebar-pill-text">Gmail</span>
+                        </div>
+                        <div class="sidebar-pill" id="sidebarBirthdayPill">
+                            <span class="sidebar-pill-icon">🎂</span>
+                            <span class="sidebar-pill-text">Birthday</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SAME NAVIGATION IN MINI AND EXPANDED STATES -->
+                <ul class="menu sidebar-nav">
+                    <li class="active"><button onclick="tab('home', this)"><span class="icon sidebar-nav-icon">🏠</span><span class="sidebar-nav-label">Home</span></button></li>
+                    <li><button onclick="tab('meals', this)"><span class="icon sidebar-nav-icon">🍽️</span><span class="sidebar-nav-label">Meals</span></button></li>
+                    <li><button onclick="tab('accounts', this)"><span class="icon sidebar-nav-icon">💰</span><span class="sidebar-nav-label">Accounts</span></button></li>
+
+                    <hr class="divider">
+
+                    <li><button id="sidebarManagerLockBtn" class="sidebar-manager-lock" onclick="openManagerPanel()" aria-label="Manager lock"><span class="icon sidebar-nav-icon">🔐</span><span class="sidebar-nav-label">Manage...</span></button></li>
+                    <li class="nav-history"><button onclick="openHistoryInsideProfile()"><span class="icon sidebar-nav-icon">🕐</span><span class="sidebar-nav-label">History</span></button></li>
+                    <li class="nav-settings"><button onclick="openSettingsInsideProfile()"><span class="icon sidebar-nav-icon">⚙️</span><span class="sidebar-nav-label">Settings</span></button></li>
+                    <li class="nav-download"><button onclick="downloadPdfReport()"><span class="icon sidebar-nav-icon">📁</span><span class="sidebar-nav-label">Downlo...</span></button></li>
+                </ul>
+
+                <!-- EXPANDED PROFILE ACTIONS: visible only after clicking Profile -->
+                <div class="sidebar-expanded-actions" aria-label="Profile actions">
+                    <button type="button" class="sidebar-action-btn" onclick="toggleTheme()">
+                        <span class="sidebar-action-icon">🌙</span>
+                        <span>Dark Mode</span>
+                    </button>
+
+                    <button type="button" class="sidebar-action-btn" onclick="openHistoryInsideProfile()">
+                        <span class="sidebar-action-icon">🕐</span>
+                        <span>History</span>
+                    </button>
+
+                    <button type="button" class="sidebar-action-btn" onclick="openSettingsInsideProfile()">
+                        <span class="sidebar-action-icon">⚙️</span>
+                        <span>Settings</span>
+                    </button>
+
+                    <button type="button" class="sidebar-action-btn" onclick="downloadPdfReport()">
+                        <span class="sidebar-action-icon">📁</span>
+                        <span>Download</span>
+                    </button>
+
+                    <button type="button" class="sidebar-action-btn sidebar-action-logout" onclick="logout()">
+                        <span class="sidebar-action-icon">⏻</span>
+                        <span>Log Out</span>
+                    </button>
+                </div>
+
+                <button class="sidebar-logout-btn" onclick="logout()">
+                    <span class="sidebar-logout-icon">⏻</span>
+                    <span class="sidebar-logout-label">Log Out</span>
+                </button>
+            </aside>
+
+            <!-- MAIN AREA -->
+            <div class="app-main">
+
+                <div class="container">
+
+                    <div id="demoBanner" class="demo-banner hidden" style="background:#ecfdf5;border:1.5px solid #a7f3d0;color:#065f46;padding:10px 16px;border-radius:14px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:center;font-size:13px;font-weight:600;box-shadow:0 2px 8px rgba(16,185,129,.1)">
+                        <span>🌟 <b>Demo Mode Active:</b> Feel free to test meal editing, expenses, charts & reports!</span>
+                        <button type="button" class="btn btn-light" style="width:auto;margin:0;padding:5px 12px;font-size:12px;border-radius:8px;cursor:pointer;background:#fff;border:1px solid #a7f3d0;color:#065f46;font-weight:700" onclick="exitDemoMode()">Exit Demo ✕</button>
+                    </div>
+
+            <section id="home" class="page active">
+                <div class="home-layout">
+                    <div class="home-content">
+
+                        <div class="home-topbar">
+                            <div class="home-brand">
+                                <span class="home-brand-icon">👨‍🍳</span>
+                                <div class="home-brand-text">
+                                    <div class="home-brand-name"><span class="brand-blue">HI</span><span class="brand-purple">SAB</span></div>
+                                    <div class="home-brand-sub">MEAL MANAGEMENT SYSTEM</div>
+                                </div>
+                            </div>
+
+
+                            <div class="home-welcome-copy">
+                                <h1>WELCOME BACK <span class="wave">👋</span></h1>
+                                <div class="home-welcome-name" id="homeWelcomeName">Not set</div>
+                            </div>
+
+                            <button class="home-bell-btn" onclick="openNotice()" aria-label="Notifications">
+                                🔔<span class="home-bell-dot"></span>
+                            </button>
+                        </div>
+
+                        <div class="mess-info-wrap">
+
+                            <div class="mess-info-title">MESS INFO</div>
+
+                            <div class="home-cards-row">
+
+                                <div class="mess-info-card">
+                                    <div class="mess-info-blob"></div>
+
+                                    <div class="mess-info-manager">
+                                        <div class="home-welcome-avatar" id="homeWelcomeAvatarLarge">S</div>
+
+                                        <div class="mess-info-manager-text">
+                                            <span class="mess-info-label">
+                                                MANAGER
+                                                <button id="homeManagerLockState" class="home-lock-btn" type="button" onclick="toggleManagerLock()">🔒 Locked</button>
+                                            </span>
+                                            <strong id="messInfoManagerName">Not set</strong>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="home-mini-card home-phone-card">
+                                    <div class="home-icon-box home-icon-purple">📞</div>
+                                    <div class="home-card-text">
+                                        <span class="mess-info-label">PHONE NUMBER</span>
+                                        <a id="messInfoManagerPhone" class="home-link" href="#">Not set</a>
+                                    </div>
+                                </div>
+
+                                <div class="home-mini-card home-code-card">
+                                    <div class="home-code-card-top">
+                                        <div class="home-icon-box home-icon-yellow">🔑</div>
+                                        <div class="home-card-text">
+                                            <span class="mess-info-label">JOIN CODE</span>
+                                            <strong id="messInfoCode">-</strong>
+                                        </div>
+                                    </div>
+                                    <button class="home-copy-btn" type="button" onclick="copyMessCode()">
+                                        Copy Code <span class="home-copy-icon">⧉</span>
+                                    </button>
+                                </div>
+
+                            </div>
+                        </div>
+
+                        <section class="home-cooking-card" aria-label="Today's cooking menu">
+                            <div class="home-cooking-head">
+                                <div>
+                                    <div class="home-cooking-kicker">TODAY'S MENU</div>
+                                    <h2>আজ কী রান্না হবে?</h2>
+                                </div>
+                                <div class="home-cooking-actions"><button class="home-menu-manage-btn" type="button" onclick="openHomeCookingMenuEditor()">⚙ Set Menu</button><span class="home-cooking-icon">🍲</span></div>
+                            </div>
+                            <div class="meal-list-grid">
+                                <div class="meal-list-card meal-list-card-lunch">
+                                    <div class="meal-list-head">
+                                        <div>
+                                            <div class="meal-list-kicker">MEALS LIST</div>
+                                            <div class="meal-list-date" id="homeMenuDate1"></div>
+                                        </div>
+                                        <div class="meal-list-time-badge">🕐 <span id="homeMenuTime1"></span></div>
+                                    </div>
+                                    <h3 class="meal-list-title">দুপুরের খাবার (Lunch)</h3>
+                                    <div id="homeMenuMeal1" class="meal-list-items"></div>
+                                </div>
+                                <div class="meal-list-card meal-list-card-dinner">
+                                    <div class="meal-list-head">
+                                        <div>
+                                            <div class="meal-list-kicker">MEALS LIST</div>
+                                            <div class="meal-list-date" id="homeMenuDate2"></div>
+                                        </div>
+                                        <div class="meal-list-time-badge">🕐 <span id="homeMenuTime2"></span></div>
+                                    </div>
+                                    <h3 class="meal-list-title">রাতের খাবার (Dinner)</h3>
+                                    <div id="homeMenuMeal2" class="meal-list-items"></div>
+                                </div>
+                            </div>
+                        </section>
+
+                        <div class="home-stats-row">
+                            <div class="home-stat-box home-stat-teal">
+                                <div class="home-stat-icon">🍽️</div>
+                                <div class="home-stat-text">
+                                    <div class="home-stat-label">MEALS</div>
+                                    <div class="home-stat-value" id="mealCount">0</div>
+                                    <div class="home-stat-sub">Total Meals</div>
+                                </div>
+                                <button class="home-stat-trend" type="button" aria-label="Trend">↗</button>
+                            </div>
+                            <div class="home-stat-box home-stat-purple">
+                                <div class="home-stat-icon">👥</div>
+                                <div class="home-stat-text">
+                                    <div class="home-stat-label">MEMBERS</div>
+                                    <div class="home-stat-value" id="homeMemberCount">0</div>
+                                    <div class="home-stat-sub">Total Members</div>
+                                </div>
+                                <button class="home-stat-trend" type="button" aria-label="Trend">↗</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="meals" class="page">
+                <div class="card">
+                    <div class="modal-head">
+                        <div>
+                            <h2 data-i18n="tabMeals">Meals</h2>
+                            <small class="locked" data-i18n="mealsPerDay">2 meals per day</small>
+                        </div>
+                    </div>
+
+                    <div class="meal-summary" style="margin-top:10px">
+                        <div>
+                            <b data-i18n="todaysMealSummary">Today's Meal Summary</b><br>
+                            <small class="locked"><span data-i18n="meal1Label">Meal 1</span>: <span id="meal1PeopleCount">0</span> <span data-i18n="peopleWord">people</span> · <span data-i18n="meal2Label">Meal 2</span>: <span id="meal2PeopleCount">0</span> <span data-i18n="peopleWord">people</span></small>
+                        </div>
+                        <b><span data-i18n="totalWord">Total</span>: <span id="totalMealPeople">0</span></b>
+                    </div>
+                    <div class="meal-summary" style="margin-top:8px">
+                        <div><b>মিল রেট (Meal Rate)</b><br><small class="locked">মোট খরচ ÷ মোট মিল</small></div>
+                        <b class="balance" id="mealRateDisplay">৳0</b>
+                    </div>
+
+                    <div id="mealMemberList" style="margin-top:14px"></div>
+                </div>
+            </section>
+
+            <section id="accounts" class="page">
+                <div class="home-layout">
+                    <div class="home-content">
+
+                        <div class="home-cards-row">
+
+                            <div class="mess-info-card">
+                                <div class="mess-info-blob"></div>
+                                <div class="mess-info-title">ACCOUNTS</div>
+                                <div class="mess-info-manager">
+                                    <div class="home-welcome-avatar" id="accountsAvatar">A</div>
+                                    <div class="mess-info-manager-text">
+                                        <span class="mess-info-label">OVERALL SUMMARY</span>
+                                        <strong id="messAccountSummary">Income &amp; Expense</strong>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="home-mini-card">
+                                <div class="home-icon-box home-icon-purple">💰</div>
+                                <div class="home-card-text">
+                                    <span class="mess-info-label">Income</span>
+                                    <strong class="income" id="income">৳0</strong>
+                                </div>
+                            </div>
+
+                            <div class="home-mini-card">
+                                <div class="home-icon-box home-icon-yellow">🧾</div>
+                                <div class="home-card-text">
+                                    <span class="mess-info-label">Expense</span>
+                                    <strong class="expense" id="expense">৳0</strong>
+                                </div>
+                            </div>
+
+                        </div>
+
+                        <div class="home-stats-row" style="margin-top:14px">
+                            <div class="home-stat-box home-stat-teal">
+                                <div class="home-stat-icon">⚖️</div>
+                                <div class="home-stat-text">
+                                    <div class="home-stat-label">Balance</div>
+                                    <div class="home-stat-value balance" id="balance">৳0</div>
+                                    <div class="home-stat-sub">Total Balance</div>
+                                </div>
+                                <button class="home-stat-trend" type="button" aria-label="Trend">↗</button>
+                            </div>
+
+                            <div class="home-stat-box home-stat-purple">
+                                <div class="home-stat-icon">📄</div>
+                                <div class="home-stat-text">
+                                    <div class="home-stat-label">Entries</div>
+                                    <div class="home-stat-value" id="entriesCount">0</div>
+                                    <div class="home-stat-sub">Total Entries</div>
+                                </div>
+                                <button class="home-stat-trend" type="button" aria-label="Trend">↗</button>
+                            </div>
+                        </div>
+
+                        <div class="card" style="margin-top:15px">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px">
+                                <h2 style="font-size:17px;margin:0">📊 হিসাব বিশ্লেষণ ও চার্ট (Analytics)</h2>
+                                <div style="display:flex;gap:8px">
+                                    <button class="btn btn-light" style="width:auto;margin:0;padding:6px 14px;font-size:13px;border-radius:10px;cursor:pointer" onclick="exportToCsv()">📥 Export CSV</button>
+                                    <button class="btn btn-light" style="width:auto;margin:0;padding:6px 14px;font-size:13px;border-radius:10px;cursor:pointer" onclick="window.print()">🖨️ Print Report</button>
+                                </div>
+                            </div>
+                            <div style="position:relative;height:220px;max-width:100%;display:flex;justify-content:center;align-items:center">
+                                <canvas id="analyticsChart"></canvas>
+                            </div>
+                        </div>
+
+                        <div class="card" style="margin-top:15px">
+                            <h2 style="font-size:17px" data-i18n="memberWiseHisab">Member Wise Hisab</h2>
+                            <div id="memberSummaryList"></div>
+                        </div>
+
+                    </div>
+                </div>
+            </section>
+
+            <section id="entryPage" class="page">
+                <div class="card">
+                    <div class="modal-head">
+                        <h2>নতুন এন্ট্রি (Add Entry)</h2>
+                        <button class="close" onclick="closeEntryPage()">✕</button>
+                    </div>
+
+                    <div class="setting-text" style="margin-bottom:10px"><span>জমা (Income) নাকি খরচ (Expense) — টাইপ বেছে নিন</span></div>
+                    <div style="display:flex;gap:10px;margin-bottom:16px">
+                        <button id="entryTypeIncomeBtn" class="btn btn-light" style="flex:1;margin:0" onclick="setEntryType('income')">💰 জমা (Income)</button>
+                        <button id="entryTypeExpenseBtn" class="btn btn-light" style="flex:1;margin:0" onclick="setEntryType('expense')">🧾 খরচ (Expense)</button>
+                    </div>
+
+                    <div id="entryMemberField" class="hidden">
+                        <label>কে জমা দিলো (Member)</label>
+                        <select id="entryMemberSelect"></select>
+                    </div>
+
+                    <label>বিবরণ (Description)</label>
+                    <input id="entryDesc" type="text" placeholder="যেমন: বাজার খরচ / মাসের জমা">
+                    <label>টাকার পরিমাণ (Amount ৳)</label>
+                    <input id="entryAmount" type="number" min="1" placeholder="৳">
+
+                    <button class="btn btn-primary" style="margin-top:18px" onclick="saveEntryFromPage()">✓ Save Entry</button>
+                </div>
+            </section>
+
+            <section id="history" class="page">
+                <div class="card">
+                    <h2>History</h2>
+                    <div id="historyList">
+                        <p class="locked">No activity yet.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="managerPanel" class="page">
+                <div class="card manager-card">
+                    <div class="manager-title">
+                        <div>
+                            <h2>Manager</h2>
+                            <p class="locked">Manager controls are protected by a PIN.</p>
+                        </div>
+                        <div style="display:flex;align-items:center;gap:10px;">
+                            <button id="managerLockState" class="manager-lock-btn" type="button" onclick="toggleManagerLock()">🔒 Locked</button>
+                            <button class="close manager-close" onclick="closeManagerPanel()" title="Close">✕</button>
+                        </div>
+                    </div>
+
+                    <div id="managerControls">
+                        <div class="manager-section">
+                            <div class="setting">
+                                <div class="setting-text"><strong>১. হিসাব এন্ট্রি</strong><span>জমা বা খরচ যোগ করুন</span></div>
+                            </div>
+                            <button class="btn btn-primary" onclick="openEntryPage()">+ Add Entry</button>
+                        </div>
+
+                        <div class="manager-section">
+                            <div class="setting">
+                                <div class="setting-text"><strong>২. মিলের হিসাব এডিট</strong><span>সব member-এর লিস্ট থেকে মিল সংখ্যা লিখুন</span></div>
+                            </div>
+                            <button class="btn btn-primary" onclick="openMealEditPage()">✎ মিলের হিসাব এডিট করুন</button>
+                        </div>
+
+                        <div class="manager-section">
+                            <div class="setting">
+                                <div class="setting-text"><strong>৩. মিল অন/অফ করার সময়সীমা</strong><span>এই সময়ের পরে সাধারণ member নিজের মিল টগল করতে পারবে না</span></div>
+                            </div>
+                            <div class="meal-time-row">
+                                <div class="meal-time-field">
+                                    <label>Meal 1 বন্ধ হবে</label>
+                                    <input id="meal1CutoffInput" type="time">
+                                </div>
+                                <div class="meal-time-field">
+                                    <label>Meal 2 বন্ধ হবে</label>
+                                    <input id="meal2CutoffInput" type="time">
+                                </div>
+                            </div>
+                            <button class="btn btn-primary" onclick="saveMealTimes()">Save Changes</button>
+                        </div>
+
+                        <div class="manager-section manager-menu-section">
+                            <div class="setting">
+                                <div class="setting-text"><strong>৪. আজকের রান্নার মেনু</strong><span>Home page-এ দুই বেলার কী কী রান্না হবে সেট করুন। এই অংশটি Manager PIN দিয়ে Unlock করার পরেই পরিবর্তন করা যাবে।</span></div>
+                            </div>
+                            <div class="manager-menu-grid">
+                                <div class="manager-menu-box">
+                                    <label>Meal 1 — কী কী রান্না হবে?</label>
+                                    <textarea id="managerMenuMeal1" class="manager-menu-textarea" rows="5" placeholder="প্রতিটি রান্না আলাদা লাইনে লিখুন।
+যেমন:
+ভাত
+ডাল
+মাছ
+সবজি"></textarea>
+                                </div>
+                                <div class="manager-menu-box">
+                                    <label>Meal 2 — কী কী রান্না হবে?</label>
+                                    <textarea id="managerMenuMeal2" class="manager-menu-textarea" rows="5" placeholder="প্রতিটি রান্না আলাদা লাইনে লিখুন।
+যেমন:
+ভাত
+ডিম
+মুরগি
+ডাল"></textarea>
+                                </div>
+                            </div>
+                            <div class="manager-menu-list-area">
+                                <div class="manager-menu-list-title">রান্নার List</div>
+                                <div id="managerMenuItemList" class="manager-menu-item-list"></div>
+                                <div class="manager-menu-add-row">
+                                    <input id="managerMenuNewItem" type="text" placeholder="নতুন রান্নার নাম লিখুন, যেমন: সবজি">
+                                    <button class="btn btn-accent" type="button" onclick="addManagerMenuItem()">＋ Add to List</button>
+                                </div>
+                            </div>
+                            <small class="locked manager-menu-note">Default list: ভাত · মাছ · ডাল · ডিম · মুরগি</small>
+                            <button class="btn btn-primary" onclick="saveHomeCookingMenu()">✓ Save Today's Menu</button>
+                        </div>
+
+                        <div class="manager-section">
+                            <div class="setting">
+                                <div class="setting-text"><strong>৫. Manager Notification</strong><span>Send a notification to members</span></div>
+                            </div>
+                            <input id="managerNotice" type="text" placeholder="Write notification">
+                            <button class="btn btn-accent" onclick="sendManagerNotification()">Send Notification</button>
+                        </div>
+
+                        <div class="manager-section">
+                            <div class="setting">
+                                <div class="setting-text"><strong>৬. Current Manager</strong><span>Choose who controls the manager system</span></div>
+                            </div>
+                            <select id="managerSelect"></select>
+                            <label style="font-size:12px;color:var(--muted)">Manager-এর ফোন নম্বর (Home page-এ দেখাবে)</label>
+                            <input id="managerPhoneInput" type="tel" placeholder="যেমন: 01XXXXXXXXX">
+                            <button class="btn btn-primary" onclick="setManager()">Set Manager</button>
+                        </div>
+
+                        <div class="manager-section">
+                            <div class="setting">
+                                <div class="setting-text"><strong>৭. Manager PIN</strong><span>Change the PIN used to unlock these controls</span></div>
+                            </div>
+                            <button class="btn btn-light" onclick="changeManagerPin()">Change PIN</button>
+                        </div>
+
+                        <div class="manager-section">
+                            <div class="setting">
+                                <div class="setting-text"><strong>৮. Members যোগ করুন</strong><span>নতুন member যোগ করুন</span></div>
+                            </div>
+                            <div id="memberList"></div>
+                            <button class="btn btn-light" onclick="manageMembers()">+ Add Member</button>
+                        </div>
+
+                        <div class="manager-section">
+                            <div class="setting">
+                                <div class="setting-text"><strong>৯. Member Info</strong><span>সব member-এর নাম, নম্বর দেখুন এবং প্রয়োজন হলে remove করুন</span></div>
+                            </div>
+                            <button class="btn btn-light" onclick="openMemberInfoPage()">👥 Member Info</button>
+                        </div>
+
+                        <div class="manager-save-bar">
+                            <button class="btn btn-primary manager-save-btn" onclick="saveManagerChanges()">✓ Save Changes</button>
+                        </div>
+
+                        <div class="manager-section">
+                            <div class="setting">
+                                <div class="setting-text"><strong>১০. Monthly Data</strong><span>পুরো মাসের হিসাব মুছে ফেলুন</span></div>
+                            </div>
+                            <button class="btn btn-danger" onclick="resetMonthlyData()">🗑️ পুরো মাসের হিসাব Delete করুন</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="memberInfoPage" class="page">
+                <div class="card">
+                    <div class="modal-head">
+                        <div>
+                            <h2>Member Info</h2>
+                            <small class="locked">All members, phone numbers and remove options</small>
+                        </div>
+                        <button class="close" onclick="closeMemberInfoPage()" title="Close">✕</button>
+                    </div>
+                    <div style="overflow-x:auto">
+                        <table class="member-info-table">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Number</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody id="memberInfoTableBody"></tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-light" onclick="manageMembers()">+ Add Member</button>
+                </div>
+            </section>
+
+            <section id="mealEditPage" class="page">
+                <div class="card">
+                    <div class="modal-head">
+                        <h2>মিলের হিসাব এডিট</h2>
+                        <button class="close" onclick="closeMealEditPage()">✕</button>
+                    </div>
+                    <p class="locked">যেকোনো ঘরে সরাসরি সংখ্যা লিখুন — লিখলেই সাথে সাথে সেভ হয়ে যাবে।</p>
+                    <div style="overflow-x:auto;margin-top:12px">
+                        <table class="meal-edit-table">
+                            <thead>
+                                <tr>
+                                    <th>সদস্য</th>
+                                    <th>মিল ১</th>
+                                    <th>মিল ২</th>
+                                    <th>গেস্ট</th>
+                                    <th>মোট</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mealEditTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <div class="bottom-note">Hisab prototype • Data is saved in this browser</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="printReport"></div>
+
+    <!-- Profile -->
+    <div id="profileModal" class="modal">
+        <div class="modal-box">
+            <div class="modal-head"><span></span><button class="close" onclick="closeModal('profileModal')">✕</button></div>
+            <div class="profile-box">
+                <div class="profile-photo-wrap">
+                    <div class="profile-photo" id="profilePhoto">?</div>
+                    <label class="profile-edit-icon" title="Edit Profile Photo" aria-label="Edit Profile Photo">
+          ✎
+          <input id="profilePhotoInput" type="file" accept="image/*" hidden onchange="changePhoto()">
+        </label>
+                </div>
+                <h3 id="profileDisplayName" style="margin:6px 0 2px;font-size:22px"></h3>
+                <small class="locked">Account Information</small>
+                <br><br>
+
+                <label>Name</label>
+                <input id="profileName" type="text">
+                <label>Number</label>
+                <input id="profileNumber" type="tel">
+                <label>Gmail</label>
+                <input id="profileEmail" type="email">
+                <label>Birthday</label>
+                <input id="profileBirthday" type="date">
+                <button class="btn btn-primary hidden" onclick="saveProfile()">Save Profile</button>
+            </div>
+
+            <div class="settings-list" style="margin-top:18px">
+                <div class="setting">
+                    <div class="setting-text"><strong>Settings</strong><span>Theme, language, members and manager</span></div><button class="link-btn arrow-btn" onclick="openSettingsInsideProfile()" aria-label="Open Settings">→</button></div>
+                <div class="setting">
+                    <div class="setting-text"><strong>History</strong><span>Account and activity history</span></div><button class="link-btn arrow-btn" onclick="openHistoryInsideProfile()" aria-label="Open History">→</button></div>
+                <div class="setting">
+                    <div class="setting-text"><strong>Download PDF</strong></div><button class="link-btn" onclick="downloadPdfReport()">Download</button></div>
+            </div>
+
+            <div id="profileSettingsArea" class="card hidden" style="display:none;margin-top:15px;text-align:left;border-radius:18px">
+                <div class="modal-head">
+                    <h3>Settings</h3><button class="close" onclick="closeProfileSubPage('settings')">✕</button></div>
+                <div class="setting">
+                    <div class="setting-text"><strong>Name</strong><span>Change your profile name</span></div><button class="link-btn" onclick="editSetting('name')">Change</button></div>
+                <div class="setting">
+                    <div class="setting-text"><strong>Phone Number</strong><span>Change your phone number</span></div><button class="link-btn" onclick="editSetting('phone')">Change</button></div>
+                <div class="setting">
+                    <div class="setting-text"><strong>Gmail</strong><span>Change your Gmail address</span></div><button class="link-btn" onclick="editSetting('email')">Change</button></div>
+                <div class="setting">
+                    <div class="setting-text"><strong>Birthday</strong><span>Change your date of birth</span></div><button class="link-btn" onclick="editSetting('birthday')">Change</button></div>
+                <div class="setting">
+                    <div class="setting-text"><strong>Theme</strong><span>Change appearance</span></div><button class="link-btn" onclick="toggleTheme()">Light / Dark</button></div>
+                <div class="setting">
+                    <div class="setting-text"><strong>Language</strong><span>বাংলা / English</span></div><button class="link-btn" onclick="toggleLanguage()">Switch</button></div>
+                <div class="setting">
+                    <div class="setting-text"><strong>Member & Manager</strong><span>Open management controls</span></div><button class="link-btn arrow-btn" onclick="openManagerPanel()" aria-label="Open Manager">→</button></div>
+
+                <div id="settingEditor" class="hidden" style="margin-top:15px;padding-top:15px;border-top:1px solid var(--border)">
+                    <label id="settingEditorLabel"></label>
+                    <input id="settingEditorInput">
+                    <button class="btn btn-primary" onclick="saveSetting()">Save</button>
+                </div>
+            </div>
+
+            <div id="profileHistoryArea" class="card hidden" style="display:none;margin-top:15px;text-align:left;border-radius:18px">
+                <div class="modal-head">
+                    <h3>History</h3><button class="close" onclick="closeProfileSubPage('history')">✕</button></div>
+                <div id="profileHistoryList"></div>
+            </div>
+
+            <button class="btn btn-danger" onclick="logout()">Log Out</button>
+        </div>
+    </div>
+
+    <!-- Settings Page -->
+    <div id="settingsPage" class="modal page-screen">
+        <div class="modal-box page-box">
+            <div class="modal-head">
+                <button class="link-btn back-btn" onclick="closeSettingsPage()" aria-label="Back">← Back</button>
+                <h2>Settings</h2>
+            </div>
+
+            <div class="card settings-list" style="box-shadow:none;margin:0">
+                <div class="setting setting-editable" id="settingRowName">
+                    <div class="setting-text"><strong>Name</strong><span>Change your profile name</span></div>
+                    <button class="settings-action" onclick="editSetting('name')" aria-label="Change name">✎</button>
+                </div>
+                <div id="settingEditorName" class="setting-editor hidden"></div>
+                <div class="setting setting-editable" id="settingRowPhone">
+                    <div class="setting-text"><strong>Phone Number</strong><span>Change your phone number</span></div>
+                    <button class="settings-action" onclick="editSetting('phone')" aria-label="Change phone number">✎</button>
+                </div>
+                <div id="settingEditorPhone" class="setting-editor hidden"></div>
+                <div class="setting setting-editable" id="settingRowBirthday">
+                    <div class="setting-text"><strong>Birthday</strong><span>Change your date of birth</span></div>
+                    <button class="settings-action" onclick="editSetting('birthday')" aria-label="Change birthday">✎</button>
+                </div>
+                <div id="settingEditorBirthday" class="setting-editor hidden"></div>
+                <div class="setting">
+                    <div class="setting-text"><strong>User Privacy</strong><span>Choose who can view your profile information</span></div>
+                    <select id="privacySelect" class="privacy-select" onchange="savePrivacySetting(this.value)">
+          <option value="private">Private</option>
+          <option value="members">Members Only</option>
+          <option value="public">Public</option>
+        </select>
+                </div>
+                <div class="setting">
+                    <div class="setting-text"><strong>Language</strong><span>বাংলা / English</span></div>
+                    <button class="settings-action" onclick="toggleLanguage()" aria-label="Change language">文</button>
+                </div>
+            </div>
+
+            <div id="standaloneSettingEditor" class="hidden"></div>
+        </div>
+    </div>
+
+    <!-- History Page -->
+    <div id="historyPage" class="modal page-screen">
+        <div class="modal-box page-box">
+            <div class="modal-head">
+                <button class="link-btn back-btn" onclick="closeHistoryPage()" aria-label="Back">← Back</button>
+                <h2>History</h2>
+            </div>
+            <div class="card" style="box-shadow:none;margin:0">
+                <div id="standaloneHistoryList"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notice -->
+    <div id="noticeModal" class="modal">
+        <div class="modal-box">
+            <div class="modal-head">
+                <h3>Notice</h3><button class="close" onclick="closeModal('noticeModal')">✕</button></div>
+            <div id="noticeList">
+                <p class="locked">No notices.</p>
+            </div>
+        </div>
+    </div>
+    <div id="managerPinModal" class="modal">
+        <div class="modal-box page-box" style="max-width:420px;padding:18px">
+            <div class="modal-head">
+                <h2 id="pinDialogTitle">Manager PIN</h2>
+                <button class="close" onclick="closeModal('managerPinModal')">✕</button>
+            </div>
+            <div style="padding:12px 6px">
+                <p id="pinDialogHint" class="locked">Enter your Manager PIN.</p>
+                <input id="pinInput" type="password" placeholder="1234" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border);margin-top:8px">
+                <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+                    <button id="pinDialogCancelBtn" class="btn btn-light" onclick="closeModal('managerPinModal')">Cancel</button>
+                    <button id="pinDialogConfirmBtn" class="btn btn-primary">Confirm</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="cookingMenuModal" class="modal">
+        <div class="modal-box cooking-menu-box">
+            <div class="cooking-menu-head">
+                <div class="cooking-menu-head-title">
+                    <span class="cooking-menu-head-icon">🔍</span>
+                    <h2>আজকের রান্নার মেনু</h2>
+                </div>
+                <div class="cooking-menu-head-actions">
+                    <button id="cookingMenuLockBadge" type="button" class="cooking-menu-lock-badge" onclick="unlockCookingMenuModal()">🔒 Locked - Enter PIN</button>
+                    <button class="close" onclick="closeModal('cookingMenuModal')">✕</button>
+                </div>
+            </div>
+
+            <div class="cooking-menu-quick-section">
+                <div class="cooking-menu-quick-toprow">
+                    <div class="cooking-menu-quick-label">📌 দ্রুত মেনু নির্বাচন করুন:</div>
+                    <div class="cooking-menu-target-toggle">
+                        <button type="button" id="cookingMenuTargetMeal1" class="cooking-menu-target-btn active" onclick="setCookingMenuQuickTarget('meal1')">Meal 1</button>
+                        <button type="button" id="cookingMenuTargetMeal2" class="cooking-menu-target-btn" onclick="setCookingMenuQuickTarget('meal2')">Meal 2</button>
+                    </div>
+                </div>
+                <div id="cookingMenuQuickChips" class="cooking-menu-quick-chips"></div>
+            </div>
+
+            <div class="cooking-menu-cards">
+                <div class="cooking-menu-meal-card">
+                    <div class="cooking-menu-meal-head">☀️ Meal 1 (দুপুর)</div>
+                    <div id="cookingMenuList1" class="cooking-menu-meal-list"></div>
+                </div>
+                <div class="cooking-menu-meal-card">
+                    <div class="cooking-menu-meal-head">🌙 Meal 2 (রাত)</div>
+                    <div id="cookingMenuList2" class="cooking-menu-meal-list"></div>
+                </div>
+            </div>
+
+            <button class="btn btn-primary cooking-menu-save-btn" onclick="closeCookingMenuModalAndSave()">💾 Save Today's Menu</button>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+
+    <script src="firebase-config.js"></script>
+    <script src="emailjs-config.js"></script>
+    <script src="lang.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
