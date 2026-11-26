@@ -6270,3 +6270,618 @@ if ("serviceWorker" in navigator && (window.location.protocol === "https:" || wi
         });
     });
 }
+
+
+/* =========================================================
+   FEATURE 1: QUICK ACTIONS - 1-Click Meal Toggle + Countdown
+========================================================= */
+
+function quickToggleMeal(mealNum, isOn) {
+    if (!state.user) return;
+    var today = new Date().toISOString().slice(0, 10);
+    if (!state.meals[today]) state.meals[today] = {};
+    var userName = state.user.name || state.members[0];
+    if (!state.meals[today][userName]) state.meals[today][userName] = { meal1: 0, meal2: 0 };
+
+    // Check cutoff time
+    var now = new Date();
+    var cutoffKey = "meal" + mealNum;
+    var cutoffTime = state.mealTimes ? state.mealTimes[cutoffKey] : null;
+    if (cutoffTime && !state.managerUnlocked) {
+        var parts = cutoffTime.split(":");
+        var cutoff = new Date();
+        cutoff.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
+        if (now > cutoff) {
+            alert("⏰ সময় শেষ! " + (mealNum === 1 ? "দুপুরের" : "রাতের") + " মিল পরিবর্তনের সময় " + cutoffTime + " এ শেষ হয়ে গেছে।");
+            document.getElementById("qaMeal" + mealNum + "Toggle").checked = !isOn;
+            return;
+        }
+    }
+
+    state.meals[today][userName]["meal" + mealNum] = isOn ? 1 : 0;
+    save();
+    updateQuickActionUI();
+    if (typeof renderMeals === "function") renderMeals();
+    log(userName + " meal " + mealNum + " → " + (isOn ? "ON" : "OFF"));
+}
+
+function updateQuickActionUI() {
+    var today = new Date().toISOString().slice(0, 10);
+    var userName = (state.user && state.user.name) ? state.user.name : (state.members && state.members[0] ? state.members[0] : "");
+    var todayMeals = (state.meals[today] && state.meals[today][userName]) ? state.meals[today][userName] : { meal1: 0, meal2: 0 };
+
+    var t1 = document.getElementById("qaMeal1Toggle");
+    var t2 = document.getElementById("qaMeal2Toggle");
+    var s1 = document.getElementById("qaMeal1Status");
+    var s2 = document.getElementById("qaMeal2Status");
+
+    if (t1) t1.checked = !!todayMeals.meal1;
+    if (t2) t2.checked = !!todayMeals.meal2;
+    if (s1) s1.textContent = todayMeals.meal1 ? "ON ✅" : "OFF ❌";
+    if (s2) s2.textContent = todayMeals.meal2 ? "ON ✅" : "OFF ❌";
+    if (s1) s1.className = "qa-status " + (todayMeals.meal1 ? "qa-on" : "qa-off");
+    if (s2) s2.className = "qa-status " + (todayMeals.meal2 ? "qa-on" : "qa-off");
+
+    // Bazaar duty
+    var bazaarName = document.getElementById("qaBazaarName");
+    if (bazaarName) {
+        bazaarName.textContent = (state.bazaarDuty) ? state.bazaarDuty : "সেট করা হয়নি";
+    }
+}
+
+function updateMealCountdowns() {
+    if (!state.mealTimes) return;
+    var now = new Date();
+
+    [1, 2].forEach(function(m) {
+        var el = document.getElementById("qaMeal" + m + "Countdown");
+        if (!el) return;
+        var cutoff = state.mealTimes["meal" + m];
+        if (!cutoff) { el.textContent = ""; return; }
+        var parts = cutoff.split(":");
+        var target = new Date();
+        target.setHours(parseInt(parts[0]), parseInt(parts[1]), 0, 0);
+        var diff = target - now;
+        if (diff <= 0) {
+            el.textContent = "⏰ সময় শেষ!";
+            el.className = "qa-countdown qa-expired";
+        } else {
+            var hrs = Math.floor(diff / 3600000);
+            var mins = Math.floor((diff % 3600000) / 60000);
+            el.textContent = "⏳ বাকি " + (hrs > 0 ? hrs + "ঘ " : "") + mins + "মি";
+            el.className = "qa-countdown" + (diff < 1800000 ? " qa-urgent" : "");
+        }
+    });
+}
+
+setInterval(updateMealCountdowns, 30000);
+
+/* =========================================================
+   FEATURE 2: BOTTOM NAVIGATION BAR
+========================================================= */
+
+function activateBottomNav(btn) {
+    if (!btn) return;
+    var nav = document.getElementById("bottomNav");
+    if (!nav) return;
+    nav.querySelectorAll(".bnav-btn").forEach(function(b) { b.classList.remove("active"); });
+    btn.classList.add("active");
+}
+
+function showBottomNav() {
+    var nav = document.getElementById("bottomNav");
+    if (nav) nav.classList.remove("hidden");
+}
+
+function hideBottomNav() {
+    var nav = document.getElementById("bottomNav");
+    if (nav) nav.classList.add("hidden");
+}
+
+/* =========================================================
+   FEATURE 3: bKash/Nagad Payment System
+========================================================= */
+
+if (!state.paymentSettings) {
+    state.paymentSettings = { bkash: "", nagad: "" };
+}
+if (!state.paymentRequests) {
+    state.paymentRequests = [];
+}
+if (!state.bazaarDuty) {
+    state.bazaarDuty = "";
+}
+
+function openPaymentModal() {
+    document.getElementById("paymentModal").classList.remove("hidden");
+    updatePaymentUI();
+    renderPaymentRequests();
+}
+
+function closePaymentModal() {
+    document.getElementById("paymentModal").classList.add("hidden");
+}
+
+var currentPayTab = "bkash";
+
+function switchPayTab(tab, btn) {
+    currentPayTab = tab;
+    document.querySelectorAll(".pay-tab").forEach(function(t) { t.classList.remove("active"); });
+    if (btn) btn.classList.add("active");
+    updatePaymentUI();
+}
+
+function updatePaymentUI() {
+    var icon = document.getElementById("payServiceIcon");
+    var num = document.getElementById("payNumber");
+    if (currentPayTab === "bkash") {
+        if (icon) icon.textContent = "🟪";
+        if (num) num.textContent = (state.paymentSettings && state.paymentSettings.bkash) ? state.paymentSettings.bkash : "সেট করা হয়নি";
+    } else {
+        if (icon) icon.textContent = "🟧";
+        if (num) num.textContent = (state.paymentSettings && state.paymentSettings.nagad) ? state.paymentSettings.nagad : "সেট করা হয়নি";
+    }
+}
+
+function copyPaymentNumber() {
+    var num = (currentPayTab === "bkash") ? (state.paymentSettings.bkash || "") : (state.paymentSettings.nagad || "");
+    if (!num) { alert("নম্বর সেট করা হয়নি!"); return; }
+    navigator.clipboard.writeText(num).then(function() {
+        alert("✅ নম্বর কপি হয়েছে: " + num);
+    }).catch(function() {
+        prompt("নম্বর কপি করুন:", num);
+    });
+}
+
+function submitPaymentRequest() {
+    var trxId = document.getElementById("payTrxId").value.trim();
+    var amount = parseFloat(document.getElementById("payAmount").value);
+    if (!trxId || !amount || amount <= 0) {
+        alert("TrxID এবং টাকার পরিমাণ দিন!");
+        return;
+    }
+    var req = {
+        id: Date.now(),
+        member: (state.user && state.user.name) ? state.user.name : "Unknown",
+        trxId: trxId,
+        amount: amount,
+        service: currentPayTab,
+        date: new Date().toLocaleString("bn-BD"),
+        status: "pending"
+    };
+    state.paymentRequests.push(req);
+    save();
+    document.getElementById("payTrxId").value = "";
+    document.getElementById("payAmount").value = "";
+    alert("✅ জমার রিকোয়েস্ট পাঠানো হয়েছে! ম্যানেজার Approve করলে ব্যালেন্সে যুক্ত হবে।");
+    renderPaymentRequests();
+    log(req.member + " payment request ৳" + amount + " via " + currentPayTab + " (TrxID: " + trxId + ")");
+}
+
+function renderPaymentRequests() {
+    var el = document.getElementById("paymentRequestsList");
+    if (!el) return;
+    var pending = (state.paymentRequests || []).filter(function(r) { return r.status === "pending"; });
+    if (pending.length === 0) {
+        el.innerHTML = "";
+        return;
+    }
+    el.innerHTML = "<div class='pay-req-title'>📋 পেন্ডিং রিকোয়েস্ট (" + pending.length + ")</div>" +
+        pending.map(function(r) {
+            return "<div class='pay-req-item'>" +
+                "<div class='pay-req-info'><strong>" + r.member + "</strong> — ৳" + r.amount + " (" + r.service + ")<br><small>TrxID: " + r.trxId + " | " + r.date + "</small></div>" +
+                (state.managerUnlocked ? "<button class='pay-approve-btn' onclick='approvePayment(" + r.id + ")'>✓ Approve</button>" : "<span class='pay-pending-badge'>⏳ Pending</span>") +
+                "</div>";
+        }).join("");
+}
+
+function approvePayment(id) {
+    var req = (state.paymentRequests || []).find(function(r) { return r.id === id; });
+    if (!req) return;
+    req.status = "approved";
+    // Add as income entry
+    state.entries.push({
+        type: "income",
+        member: req.member,
+        desc: req.service + " জমা (TrxID: " + req.trxId + ")",
+        amount: req.amount,
+        date: new Date().toISOString()
+    });
+    save();
+    if (typeof renderAccounts === "function") renderAccounts();
+    renderPaymentRequests();
+    alert("✅ " + req.member + " এর ৳" + req.amount + " জমা Approve হয়েছে!");
+    log("Payment approved: " + req.member + " ৳" + req.amount);
+}
+
+function savePaymentSettings() {
+    var bkash = document.getElementById("bkashNumberInput").value.trim();
+    var nagad = document.getElementById("nagadNumberInput").value.trim();
+    var bazaarSelect = document.getElementById("bazaarDutySelect");
+    state.paymentSettings = { bkash: bkash, nagad: nagad };
+    if (bazaarSelect) state.bazaarDuty = bazaarSelect.value;
+    save();
+    alert("✅ পেমেন্ট সেটিংস সেভ হয়েছে!");
+    updateQuickActionUI();
+}
+
+function checkLowBalance() {
+    var alertEl = document.getElementById("lowBalanceAlert");
+    if (!alertEl) return;
+    if (!state.user || !state.user.name) { alertEl.classList.add("hidden"); return; }
+
+    var totalIncome = 0, totalMealCost = 0;
+    var mealRate = 0;
+    var totalExpense = 0, totalMeals = 0;
+
+    (state.entries || []).forEach(function(e) {
+        if (e.type === "expense") totalExpense += (e.amount || 0);
+    });
+
+    Object.values(state.meals || {}).forEach(function(day) {
+        Object.values(day).forEach(function(m) {
+            totalMeals += (m.meal1 || 0) + (m.meal2 || 0);
+        });
+    });
+
+    if (totalMeals > 0) mealRate = totalExpense / totalMeals;
+
+    var myMeals = 0;
+    Object.values(state.meals || {}).forEach(function(day) {
+        if (day[state.user.name]) {
+            myMeals += (day[state.user.name].meal1 || 0) + (day[state.user.name].meal2 || 0);
+        }
+    });
+    totalMealCost = myMeals * mealRate;
+
+    (state.entries || []).forEach(function(e) {
+        if (e.type === "income" && e.member === state.user.name) totalIncome += (e.amount || 0);
+    });
+
+    var balance = totalIncome - totalMealCost;
+    if (balance < 0) {
+        alertEl.classList.remove("hidden");
+    } else {
+        alertEl.classList.add("hidden");
+    }
+}
+
+/* =========================================================
+   FEATURE 4: WhatsApp Share
+========================================================= */
+
+function shareToWhatsApp(type) {
+    var text = "";
+    var today = new Date().toLocaleDateString("bn-BD", { year: "numeric", month: "long", day: "numeric" });
+
+    if (type === "daily") {
+        var todayKey = new Date().toISOString().slice(0, 10);
+        var dayMeals = state.meals[todayKey] || {};
+        var totalM1 = 0, totalM2 = 0;
+        Object.values(dayMeals).forEach(function(m) {
+            totalM1 += (m.meal1 || 0);
+            totalM2 += (m.meal2 || 0);
+        });
+
+        text = "📋 *হিসাব — আজকের রিপোর্ট*\n";
+        text += "📅 " + today + "\n\n";
+        text += "☀️ দুপুর (Meal 1): " + totalM1 + " জন\n";
+        text += "🌙 রাত (Meal 2): " + totalM2 + " জন\n";
+        text += "📊 মোট মিল: " + (totalM1 + totalM2) + "\n";
+        if (state.bazaarDuty) text += "🛒 আজকের বাজার: " + state.bazaarDuty + "\n";
+        text += "\n— হিসাব অ্যাপ 📖";
+    } else {
+        var totalIncome = 0, totalExpense = 0, totalMeals = 0;
+        (state.entries || []).forEach(function(e) {
+            if (e.type === "income") totalIncome += (e.amount || 0);
+            if (e.type === "expense") totalExpense += (e.amount || 0);
+        });
+        Object.values(state.meals || {}).forEach(function(day) {
+            Object.values(day).forEach(function(m) {
+                totalMeals += (m.meal1 || 0) + (m.meal2 || 0);
+            });
+        });
+        var mealRate = totalMeals > 0 ? (totalExpense / totalMeals).toFixed(2) : 0;
+
+        text = "📊 *হিসাব — মাসিক রিপোর্ট*\n";
+        text += "📅 " + today + "\n\n";
+        text += "👥 মোট মেম্বার: " + state.members.length + "\n";
+        text += "🍽️ মোট মিল: " + totalMeals + "\n";
+        text += "💰 মোট জমা: ৳" + totalIncome + "\n";
+        text += "🧾 মোট খরচ: ৳" + totalExpense + "\n";
+        text += "⚖️ ব্যালেন্স: ৳" + (totalIncome - totalExpense) + "\n";
+        text += "📈 মিল রেট: ৳" + mealRate + "\n";
+        text += "\n— হিসাব অ্যাপ 📖";
+    }
+
+    var url = "https://wa.me/?text=" + encodeURIComponent(text);
+
+    if (navigator.share) {
+        navigator.share({ title: "হিসাব রিপোর্ট", text: text }).catch(function() {
+            window.open(url, "_blank");
+        });
+    } else {
+        window.open(url, "_blank");
+    }
+}
+
+/* =========================================================
+   FEATURE 5: Meal Rate Transparency
+========================================================= */
+
+function updateMealRateCard() {
+    var totalExpense = 0, totalMeals = 0;
+    (state.entries || []).forEach(function(e) {
+        if (e.type === "expense") totalExpense += (e.amount || 0);
+    });
+    Object.values(state.meals || {}).forEach(function(day) {
+        Object.values(day).forEach(function(m) {
+            totalMeals += (m.meal1 || 0) + (m.meal2 || 0);
+        });
+    });
+    var rate = totalMeals > 0 ? totalExpense / totalMeals : 0;
+
+    var el1 = document.getElementById("mrfTotalExpense");
+    var el2 = document.getElementById("mrfTotalMeals");
+    var el3 = document.getElementById("mrfRate");
+    if (el1) el1.textContent = "৳" + totalExpense;
+    if (el2) el2.textContent = totalMeals;
+    if (el3) el3.textContent = "৳" + rate.toFixed(2);
+
+    // My breakdown
+    if (state.user && state.user.name) {
+        var myMeals = 0, myDeposit = 0;
+        Object.values(state.meals || {}).forEach(function(day) {
+            if (day[state.user.name]) {
+                myMeals += (day[state.user.name].meal1 || 0) + (day[state.user.name].meal2 || 0);
+            }
+        });
+        (state.entries || []).forEach(function(e) {
+            if (e.type === "income" && e.member === state.user.name) myDeposit += (e.amount || 0);
+        });
+        var myCost = myMeals * rate;
+        var myBal = myDeposit - myCost;
+
+        var e1 = document.getElementById("myDeposit");
+        var e2 = document.getElementById("myTotalMeals");
+        var e3 = document.getElementById("myMealCost");
+        var e4 = document.getElementById("myBalance");
+        if (e1) e1.textContent = "৳" + myDeposit;
+        if (e2) e2.textContent = myMeals;
+        if (e3) e3.textContent = "৳" + myCost.toFixed(2);
+        if (e4) {
+            e4.textContent = "৳" + myBal.toFixed(2);
+            e4.className = myBal >= 0 ? "income" : "expense";
+        }
+    }
+}
+
+function toggleMyBreakdown() {
+    var el = document.getElementById("myBalDetails");
+    var arrow = document.getElementById("myBalArrow");
+    if (el) el.classList.toggle("hidden");
+    if (arrow) arrow.textContent = el && el.classList.contains("hidden") ? "▼" : "▲";
+}
+
+/* =========================================================
+   FEATURE 6: PWA Install Prompt
+========================================================= */
+
+var deferredPWAPrompt = null;
+
+window.addEventListener("beforeinstallprompt", function(e) {
+    e.preventDefault();
+    deferredPWAPrompt = e;
+    var banner = document.getElementById("pwaInstallBanner");
+    if (banner && !localStorage.getItem("pwa_dismissed")) {
+        banner.classList.remove("hidden");
+    }
+});
+
+function installPWA() {
+    if (!deferredPWAPrompt) return;
+    deferredPWAPrompt.prompt();
+    deferredPWAPrompt.userChoice.then(function(result) {
+        if (result.outcome === "accepted") {
+            console.log("PWA installed!");
+        }
+        deferredPWAPrompt = null;
+        var banner = document.getElementById("pwaInstallBanner");
+        if (banner) banner.classList.add("hidden");
+    });
+}
+
+function dismissPWABanner() {
+    var banner = document.getElementById("pwaInstallBanner");
+    if (banner) banner.classList.add("hidden");
+    localStorage.setItem("pwa_dismissed", "1");
+}
+
+/* =========================================================
+   FEATURE 7: Voice Input for Bazaar
+========================================================= */
+
+var voiceRecognition = null;
+var isRecording = false;
+
+function openVoiceModal() {
+    document.getElementById("voiceInputModal").classList.remove("hidden");
+    document.getElementById("voiceText").value = "";
+    document.getElementById("voiceResult").textContent = "";
+    document.getElementById("voiceStatus").textContent = "মাইক্রোফোনে ক্লিক করে বলুন...";
+    var micBtn = document.getElementById("voiceMicBtn");
+    if (micBtn) micBtn.classList.remove("recording");
+}
+
+function closeVoiceModal() {
+    document.getElementById("voiceInputModal").classList.add("hidden");
+    stopVoiceRecording();
+}
+
+function toggleVoiceRecording() {
+    if (isRecording) {
+        stopVoiceRecording();
+    } else {
+        startVoiceRecording();
+    }
+}
+
+function startVoiceRecording() {
+    var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+        alert("❌ আপনার ব্রাউজার ভয়েস ইনপুট সাপোর্ট করে না। Chrome ব্রাউজার ব্যবহার করুন।");
+        return;
+    }
+    voiceRecognition = new SpeechRecognition();
+    voiceRecognition.lang = "bn-BD";
+    voiceRecognition.continuous = true;
+    voiceRecognition.interimResults = true;
+
+    var finalText = document.getElementById("voiceText").value;
+
+    voiceRecognition.onresult = function(event) {
+        var interim = "";
+        for (var i = event.resultIndex; i < event.results.length; i++) {
+            if (event.results[i].isFinal) {
+                finalText += event.results[i][0].transcript + "\n";
+                document.getElementById("voiceText").value = finalText;
+            } else {
+                interim += event.results[i][0].transcript;
+            }
+        }
+        document.getElementById("voiceResult").textContent = interim;
+    };
+
+    voiceRecognition.onstart = function() {
+        isRecording = true;
+        document.getElementById("voiceStatus").textContent = "🔴 শুনছি... বলুন!";
+        var micBtn = document.getElementById("voiceMicBtn");
+        if (micBtn) micBtn.classList.add("recording");
+    };
+
+    voiceRecognition.onend = function() {
+        isRecording = false;
+        document.getElementById("voiceStatus").textContent = "✅ রেকর্ডিং শেষ।";
+        var micBtn = document.getElementById("voiceMicBtn");
+        if (micBtn) micBtn.classList.remove("recording");
+    };
+
+    voiceRecognition.onerror = function(event) {
+        console.warn("Voice error:", event.error);
+        document.getElementById("voiceStatus").textContent = "❌ সমস্যা হয়েছে: " + event.error;
+        isRecording = false;
+        var micBtn = document.getElementById("voiceMicBtn");
+        if (micBtn) micBtn.classList.remove("recording");
+    };
+
+    voiceRecognition.start();
+}
+
+function stopVoiceRecording() {
+    if (voiceRecognition) {
+        voiceRecognition.stop();
+        voiceRecognition = null;
+    }
+    isRecording = false;
+}
+
+function applyVoiceText() {
+    var text = document.getElementById("voiceText").value.trim();
+    if (!text) { alert("কিছু বলুন বা টাইপ করুন!"); return; }
+    var descField = document.getElementById("entryDesc");
+    if (descField) {
+        descField.value = text;
+    }
+    closeVoiceModal();
+    // Auto-open entry page if not already open
+    if (typeof openEntryPage === "function") openEntryPage();
+}
+
+/* =========================================================
+   FEATURE HOOKS — Wire features into existing app lifecycle
+========================================================= */
+
+// Override openApp to also show bottom nav and initialize features
+var _originalOpenApp = typeof openApp === "function" ? openApp : null;
+if (_originalOpenApp) {
+    openApp = function() {
+        _originalOpenApp.apply(this, arguments);
+        showBottomNav();
+        updateQuickActionUI();
+        updateMealCountdowns();
+        updateMealRateCard();
+        checkLowBalance();
+        populateBazaarDutySelect();
+        loadPaymentSettingsUI();
+    };
+}
+
+// Populate bazaar duty dropdown
+function populateBazaarDutySelect() {
+    var sel = document.getElementById("bazaarDutySelect");
+    if (!sel) return;
+    sel.innerHTML = "<option value=''>-- বাজার কার? --</option>";
+    (state.members || []).forEach(function(m) {
+        var opt = document.createElement("option");
+        opt.value = m;
+        opt.textContent = m;
+        if (state.bazaarDuty === m) opt.selected = true;
+        sel.appendChild(opt);
+    });
+}
+
+function loadPaymentSettingsUI() {
+    var bk = document.getElementById("bkashNumberInput");
+    var ng = document.getElementById("nagadNumberInput");
+    if (bk && state.paymentSettings) bk.value = state.paymentSettings.bkash || "";
+    if (ng && state.paymentSettings) ng.value = state.paymentSettings.nagad || "";
+}
+
+
+/* =========================================================
+   MOBILE DRAWER & RESPONSIVE NAVIGATION FIXES
+========================================================= */
+
+function toggleMobileDrawer() {
+    var sidebar = document.getElementById("appSidebar");
+    var backdrop = document.getElementById("mobileDrawerBackdrop");
+    if (!sidebar) return;
+    var isOpen = sidebar.classList.toggle("mobile-drawer-open");
+    if (isOpen) {
+        sidebar.classList.remove("collapsed");
+        sidebar.classList.add("profile-open");
+        if (backdrop) backdrop.classList.remove("hidden");
+    } else {
+        if (backdrop) backdrop.classList.add("hidden");
+    }
+}
+
+function closeMobileDrawer() {
+    var sidebar = document.getElementById("appSidebar");
+    var backdrop = document.getElementById("mobileDrawerBackdrop");
+    if (sidebar) sidebar.classList.remove("mobile-drawer-open");
+    if (backdrop) backdrop.classList.add("hidden");
+}
+
+// Auto-close mobile drawer when clicking sidebar nav or action buttons on small screens
+document.addEventListener("DOMContentLoaded", function () {
+    var sidebar = document.getElementById("appSidebar");
+    if (!sidebar) return;
+    sidebar.querySelectorAll(".sidebar-nav button, .sidebar-expanded-actions button, .sidebar-logout-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+            if (window.innerWidth <= 768) {
+                closeMobileDrawer();
+            }
+        });
+    });
+});
+
+// Hook logout to also hide bottom nav & close mobile drawer
+var _originalLogout = typeof logout === "function" ? logout : null;
+if (_originalLogout) {
+    logout = function () {
+        closeMobileDrawer();
+        hideBottomNav();
+        return _originalLogout.apply(this, arguments);
+    };
+}

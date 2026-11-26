@@ -18,6 +18,18 @@
 </head>
 
 <body>
+<!-- ===== FEATURE 6: PWA INSTALL BANNER ===== -->
+<div id="pwaInstallBanner" class="pwa-install-banner hidden">
+    <div class="pwa-install-text">
+        <span class="pwa-install-icon">📲</span>
+        <span>মোবাইলে <strong>অ্যাপ ইনস্টল</strong> করুন — প্লে-স্টোর ছাড়াই!</span>
+    </div>
+    <div class="pwa-install-actions">
+        <button class="pwa-install-btn" onclick="installPWA()">ইনস্টল করুন</button>
+        <button class="pwa-install-dismiss" onclick="dismissPWABanner()">✕</button>
+    </div>
+</div>
+
 <div id="authScreen" class="auth-page">
     <div class="auth-shell">
 
@@ -266,6 +278,7 @@
                     <div class="home-content">
 
                         <div class="home-topbar">
+                            <button id="mobileMenuBtn" class="mobile-menu-btn" type="button" onclick="toggleMobileDrawer()" aria-label="Open menu">☰</button>
                             <div class="home-brand">
                                 <span class="home-brand-icon">👨‍🍳</span>
                                 <div class="home-brand-text">
@@ -365,6 +378,61 @@
                             </div>
                         </section>
 
+                        <!-- ===== FEATURE 1: QUICK ACTIONS ===== -->
+                        <div class="quick-actions-section">
+                            <div class="quick-actions-title">⚡ কুইক অ্যাকশন</div>
+                            <div class="quick-actions-grid">
+                                <div class="quick-action-card qa-meal1">
+                                    <div class="qa-label">☀️ দুপুর (Meal 1)</div>
+                                    <div class="qa-countdown" id="qaMeal1Countdown"></div>
+                                    <label class="qa-toggle">
+                                        <input type="checkbox" id="qaMeal1Toggle" onchange="quickToggleMeal(1, this.checked)">
+                                        <span class="qa-slider"></span>
+                                    </label>
+                                    <div class="qa-status" id="qaMeal1Status">OFF</div>
+                                </div>
+                                <div class="quick-action-card qa-meal2">
+                                    <div class="qa-label">🌙 রাত (Meal 2)</div>
+                                    <div class="qa-countdown" id="qaMeal2Countdown"></div>
+                                    <label class="qa-toggle">
+                                        <input type="checkbox" id="qaMeal2Toggle" onchange="quickToggleMeal(2, this.checked)">
+                                        <span class="qa-slider"></span>
+                                    </label>
+                                    <div class="qa-status" id="qaMeal2Status">OFF</div>
+                                </div>
+                            </div>
+                            <div class="qa-bazaar-duty" id="qaBazaarDuty">
+                                🛒 আজকের বাজার: <strong id="qaBazaarName">সেট করা হয়নি</strong>
+                            </div>
+                        </div>
+
+                        <!-- ===== FEATURE 5: MEAL RATE TRANSPARENCY ===== -->
+                        <div class="meal-rate-card" id="mealRateCard">
+                            <div class="meal-rate-header">
+                                <span class="meal-rate-icon">📊</span>
+                                <span class="meal-rate-title">মিল রেট ক্যালকুলেশন</span>
+                            </div>
+                            <div class="meal-rate-formula">
+                                <div class="mrf-box"><span class="mrf-label">মোট বাজার</span><span class="mrf-val" id="mrfTotalExpense">৳0</span></div>
+                                <span class="mrf-op">÷</span>
+                                <div class="mrf-box"><span class="mrf-label">মোট মিল</span><span class="mrf-val" id="mrfTotalMeals">0</span></div>
+                                <span class="mrf-op">=</span>
+                                <div class="mrf-box mrf-result"><span class="mrf-label">মিল রেট</span><span class="mrf-val" id="mrfRate">৳0</span></div>
+                            </div>
+                            <div class="my-balance-card" id="myBalanceCard" onclick="toggleMyBreakdown()">
+                                <div class="my-bal-row">
+                                    <span>🧑 আমার হিসাব</span>
+                                    <span class="my-bal-arrow" id="myBalArrow">▼</span>
+                                </div>
+                                <div class="my-bal-details hidden" id="myBalDetails">
+                                    <div class="my-bal-item"><span>জমা দিয়েছি:</span><span class="income" id="myDeposit">৳0</span></div>
+                                    <div class="my-bal-item"><span>মোট মিল:</span><span id="myTotalMeals">0</span></div>
+                                    <div class="my-bal-item"><span>মিল খরচ:</span><span class="expense" id="myMealCost">৳0</span></div>
+                                    <div class="my-bal-item my-bal-final"><span>বাকি আছে:</span><span class="balance" id="myBalance">৳0</span></div>
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="home-stats-row">
                             <div class="home-stat-box home-stat-teal">
                                 <div class="home-stat-icon">🍽️</div>
@@ -384,6 +452,16 @@
                                 </div>
                                 <button class="home-stat-trend" type="button" aria-label="Trend">↗</button>
                             </div>
+                        </div>
+
+                        <!-- ===== FEATURE 4: WHATSAPP SHARE ===== -->
+                        <div class="whatsapp-share-row">
+                            <button class="wa-share-btn" type="button" onclick="shareToWhatsApp('daily')">
+                                <span class="wa-icon">📱</span> আজকের হিসাব WhatsApp-এ শেয়ার করুন
+                            </button>
+                            <button class="wa-share-btn wa-monthly" type="button" onclick="shareToWhatsApp('monthly')">
+                                📊 মাসিক রিপোর্ট শেয়ার করুন
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -417,6 +495,12 @@
             <section id="accounts" class="page">
                 <div class="home-layout">
                     <div class="home-content">
+
+                        <!-- FEATURE 3: LOW BALANCE WARNING -->
+                        <div id="lowBalanceAlert" class="low-balance-alert hidden">
+                            ⚠️ <strong>সতর্কতা:</strong> আপনার ব্যালেন্স শেষ হয়ে গেছে! দ্রুত টাকা জমা দিন।
+                            <button class="low-bal-pay-btn" onclick="openPaymentModal()">💳 টাকা জমা দিন</button>
+                        </div>
 
                         <div class="home-cards-row">
 
@@ -478,6 +562,7 @@
                                 <div style="display:flex;gap:8px">
                                     <button class="btn btn-light" style="width:auto;margin:0;padding:6px 14px;font-size:13px;border-radius:10px;cursor:pointer" onclick="exportToCsv()">📥 Export CSV</button>
                                     <button class="btn btn-light" style="width:auto;margin:0;padding:6px 14px;font-size:13px;border-radius:10px;cursor:pointer" onclick="window.print()">🖨️ Print Report</button>
+                                    <button class="btn btn-light" style="width:auto;margin:0;padding:6px 14px;font-size:13px;border-radius:10px;cursor:pointer;background:#e0ffe0;border-color:#22c55e;color:#166534" onclick="openPaymentModal()">💳 টাকা জমা দিন</button>
                                 </div>
                             </div>
                             <div style="position:relative;height:220px;max-width:100%;display:flex;justify-content:center;align-items:center">
@@ -549,6 +634,7 @@
                                 <div class="setting-text"><strong>১. হিসাব এন্ট্রি</strong><span>জমা বা খরচ যোগ করুন</span></div>
                             </div>
                             <button class="btn btn-primary" onclick="openEntryPage()">+ Add Entry</button>
+                            <button class="btn btn-light" style="margin-top:8px" onclick="openVoiceModal()">🎙️ ভয়েস দিয়ে বাজার লিখুন</button>
                         </div>
 
                         <div class="manager-section">
@@ -634,6 +720,19 @@
                                 <div class="setting-text"><strong>৭. Manager PIN</strong><span>Change the PIN used to unlock these controls</span></div>
                             </div>
                             <button class="btn btn-light" onclick="changeManagerPin()">Change PIN</button>
+                        </div>
+
+                        <div class="manager-section">
+                            <div class="setting">
+                                <div class="setting-text"><strong>৭.১ bKash/Nagad পেমেন্ট সেটআপ</strong><span>মেম্বাররা এই নম্বরে টাকা পাঠাবে</span></div>
+                            </div>
+                            <label style="font-size:12px;color:var(--muted)">বিকাশ নম্বর</label>
+                            <input id="bkashNumberInput" type="tel" placeholder="01XXXXXXXXX">
+                            <label style="font-size:12px;color:var(--muted);margin-top:8px">নগদ নম্বর</label>
+                            <input id="nagadNumberInput" type="tel" placeholder="01XXXXXXXXX">
+                            <label style="font-size:12px;color:var(--muted);margin-top:8px">আজকের বাজার কার?</label>
+                            <select id="bazaarDutySelect"></select>
+                            <button class="btn btn-primary" style="margin-top:10px" onclick="savePaymentSettings()">💾 পেমেন্ট সেটিংস সেভ করুন</button>
                         </div>
 
                         <div class="manager-section">
@@ -911,6 +1010,75 @@
             </div>
 
             <button class="btn btn-primary cooking-menu-save-btn" onclick="closeCookingMenuModalAndSave()">💾 Save Today's Menu</button>
+        </div>
+    </div>
+
+    <!-- Mobile Drawer Backdrop -->
+    <div id="mobileDrawerBackdrop" class="mobile-drawer-backdrop hidden" onclick="closeMobileDrawer()"></div>
+
+    <!-- ===== FEATURE 2: BOTTOM NAVIGATION BAR (Mobile) ===== -->
+    <nav id="bottomNav" class="bottom-nav hidden">
+        <button class="bnav-btn active" onclick="tab('home', this); activateBottomNav(this)">
+            <span class="bnav-icon">🏠</span>
+            <span class="bnav-label">Home</span>
+        </button>
+        <button class="bnav-btn" onclick="tab('meals', this); activateBottomNav(this)">
+            <span class="bnav-icon">🍽️</span>
+            <span class="bnav-label">Meals</span>
+        </button>
+        <button class="bnav-btn" onclick="tab('accounts', this); activateBottomNav(this)">
+            <span class="bnav-icon">💰</span>
+            <span class="bnav-label">Accounts</span>
+        </button>
+        <button class="bnav-btn" onclick="openManagerPanel(); activateBottomNav(this)">
+            <span class="bnav-icon">👨‍🍳</span>
+            <span class="bnav-label">Manager</span>
+        </button>
+    </nav>
+
+    <!-- ===== FEATURE 3: bKash/Nagad PAYMENT MODAL ===== -->
+    <div id="paymentModal" class="payment-modal-overlay hidden" onclick="if(event.target===this) closePaymentModal()">
+        <div class="payment-modal-box">
+            <div class="payment-modal-head">
+                <h3>💳 টাকা জমা দিন</h3>
+                <button class="close" onclick="closePaymentModal()">✕</button>
+            </div>
+            <div class="payment-tabs">
+                <button class="pay-tab active" onclick="switchPayTab('bkash', this)">বিকাশ</button>
+                <button class="pay-tab" onclick="switchPayTab('nagad', this)">নগদ</button>
+            </div>
+            <div class="payment-info-card" id="paymentInfoCard">
+                <div class="pay-number-row">
+                    <span class="pay-service-icon" id="payServiceIcon">🟪</span>
+                    <span class="pay-number" id="payNumber">সেট করা হয়নি</span>
+                    <button class="pay-copy-btn" onclick="copyPaymentNumber()">📋 Copy</button>
+                </div>
+            </div>
+            <div class="payment-form">
+                <label>TrxID / লেনদেন নম্বর</label>
+                <input id="payTrxId" type="text" placeholder="যেমন: AK4F8XH9GT">
+                <label>টাকার পরিমাণ</label>
+                <input id="payAmount" type="number" min="1" placeholder="৳">
+                <button class="btn btn-primary" onclick="submitPaymentRequest()">📤 জমার রিকোয়েস্ট পাঠান</button>
+            </div>
+            <div class="payment-requests-list" id="paymentRequestsList"></div>
+        </div>
+    </div>
+
+    <!-- ===== FEATURE 7: VOICE INPUT MODAL ===== -->
+    <div id="voiceInputModal" class="voice-modal-overlay hidden" onclick="if(event.target===this) closeVoiceModal()">
+        <div class="voice-modal-box">
+            <div class="voice-modal-head">
+                <h3>🎙️ ভয়েস দিয়ে বাজার লিখুন</h3>
+                <button class="close" onclick="closeVoiceModal()">✕</button>
+            </div>
+            <div class="voice-status" id="voiceStatus">মাইক্রোফোনে ক্লিক করে বলুন...</div>
+            <button class="voice-mic-btn" id="voiceMicBtn" onclick="toggleVoiceRecording()">
+                <span class="voice-mic-icon">🎤</span>
+            </button>
+            <div class="voice-result" id="voiceResult"></div>
+            <textarea id="voiceText" rows="4" placeholder="এখানে ভয়েস থেকে টেক্সট আসবে..."></textarea>
+            <button class="btn btn-primary" onclick="applyVoiceText()">✓ এন্ট্রিতে যোগ করুন</button>
         </div>
     </div>
 
