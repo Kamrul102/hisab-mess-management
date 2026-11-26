@@ -6383,7 +6383,7 @@ function hideBottomNav() {
 ========================================================= */
 
 if (!state.paymentSettings) {
-    state.paymentSettings = { bkash: "", nagad: "" };
+    state.paymentSettings = { bkash: "", nagad: "", bkashQr: "", nagadQr: "" };
 }
 if (!state.paymentRequests) {
     state.paymentRequests = [];
@@ -6414,13 +6414,78 @@ function switchPayTab(tab, btn) {
 function updatePaymentUI() {
     var icon = document.getElementById("payServiceIcon");
     var num = document.getElementById("payNumber");
+    var qrWrap = document.getElementById("payQrWrap");
+    var qrImg = document.getElementById("payQrImg");
+    var qrHint = document.getElementById("payQrHint");
+    var ps = state.paymentSettings || {};
+
+    var activeNumber = currentPayTab === "bkash" ? (ps.bkash || "") : (ps.nagad || "");
+    var customQr = currentPayTab === "bkash" ? (ps.bkashQr || "") : (ps.nagadQr || "");
+
     if (currentPayTab === "bkash") {
         if (icon) icon.textContent = "🟪";
-        if (num) num.textContent = (state.paymentSettings && state.paymentSettings.bkash) ? state.paymentSettings.bkash : "সেট করা হয়নি";
     } else {
         if (icon) icon.textContent = "🟧";
-        if (num) num.textContent = (state.paymentSettings && state.paymentSettings.nagad) ? state.paymentSettings.nagad : "সেট করা হয়নি";
     }
+    if (num) num.textContent = activeNumber ? activeNumber : "সেট করা হয়নি";
+
+    if (qrWrap && qrImg) {
+        if (customQr) {
+            qrImg.src = customQr;
+            qrWrap.classList.remove("hidden");
+            if (qrHint) qrHint.textContent = "📷 ম্যানেজারের QR কোড স্ক্যান করে টাকা পাঠান";
+        } else if (activeNumber) {
+            qrImg.src = "https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=" + encodeURIComponent(activeNumber);
+            qrWrap.classList.remove("hidden");
+            if (qrHint) qrHint.textContent = "📷 নম্বর থেকে তৈরি QR কোড (" + activeNumber + ")";
+        } else {
+            qrImg.removeAttribute("src");
+            qrWrap.classList.add("hidden");
+        }
+    }
+}
+
+function handleQrUpload(service, event) {
+    var file = event && event.target && event.target.files ? event.target.files[0] : null;
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function (e) {
+        var img = new Image();
+        img.onload = function () {
+            var maxDim = 360;
+            var w = img.width;
+            var h = img.height;
+            if (w > maxDim || h > maxDim) {
+                var ratio = Math.min(maxDim / w, maxDim / h);
+                w = Math.round(w * ratio);
+                h = Math.round(h * ratio);
+            }
+            var canvas = document.createElement("canvas");
+            canvas.width = w;
+            canvas.height = h;
+            var ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, w, h);
+            var compressed = canvas.toDataURL("image/jpeg", 0.8);
+
+            if (!state.paymentSettings) state.paymentSettings = { bkash: "", nagad: "", bkashQr: "", nagadQr: "" };
+            state.paymentSettings[service + "Qr"] = compressed;
+            save();
+            loadPaymentSettingsUI();
+            updatePaymentUI();
+        };
+        img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+}
+
+function clearQrImage(service) {
+    if (!state.paymentSettings) return;
+    state.paymentSettings[service + "Qr"] = "";
+    var input = document.getElementById(service + "QrInput");
+    if (input) input.value = "";
+    save();
+    loadPaymentSettingsUI();
+    updatePaymentUI();
 }
 
 function copyPaymentNumber() {
@@ -6498,11 +6563,18 @@ function savePaymentSettings() {
     var bkash = document.getElementById("bkashNumberInput").value.trim();
     var nagad = document.getElementById("nagadNumberInput").value.trim();
     var bazaarSelect = document.getElementById("bazaarDutySelect");
-    state.paymentSettings = { bkash: bkash, nagad: nagad };
+    var prev = state.paymentSettings || {};
+    state.paymentSettings = {
+        bkash: bkash,
+        nagad: nagad,
+        bkashQr: prev.bkashQr || "",
+        nagadQr: prev.nagadQr || ""
+    };
     if (bazaarSelect) state.bazaarDuty = bazaarSelect.value;
     save();
-    alert("✅ পেমেন্ট সেটিংস সেভ হয়েছে!");
+    alert("✅ পেমেন্ট ও QR সেটিংস সেভ হয়েছে!");
     updateQuickActionUI();
+    updatePaymentUI();
 }
 
 function checkLowBalance() {
@@ -6833,8 +6905,31 @@ function populateBazaarDutySelect() {
 function loadPaymentSettingsUI() {
     var bk = document.getElementById("bkashNumberInput");
     var ng = document.getElementById("nagadNumberInput");
-    if (bk && state.paymentSettings) bk.value = state.paymentSettings.bkash || "";
-    if (ng && state.paymentSettings) ng.value = state.paymentSettings.nagad || "";
+    var bkPrev = document.getElementById("bkashQrPreview");
+    var ngPrev = document.getElementById("nagadQrPreview");
+    var ps = state.paymentSettings || {};
+
+    if (bk) bk.value = ps.bkash || "";
+    if (ng) ng.value = ps.nagad || "";
+
+    if (bkPrev) {
+        if (ps.bkashQr) {
+            bkPrev.src = ps.bkashQr;
+            bkPrev.classList.remove("hidden");
+        } else {
+            bkPrev.removeAttribute("src");
+            bkPrev.classList.add("hidden");
+        }
+    }
+    if (ngPrev) {
+        if (ps.nagadQr) {
+            ngPrev.src = ps.nagadQr;
+            ngPrev.classList.remove("hidden");
+        } else {
+            ngPrev.removeAttribute("src");
+            ngPrev.classList.add("hidden");
+        }
+    }
 }
 
 

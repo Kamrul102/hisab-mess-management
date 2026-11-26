@@ -404,6 +404,10 @@
                             <div class="qa-bazaar-duty" id="qaBazaarDuty">
                                 🛒 আজকের বাজার: <strong id="qaBazaarName">সেট করা হয়নি</strong>
                             </div>
+                            <button type="button" class="qa-pay-shortcut-btn" onclick="openPaymentModal()">
+                                <span>💳 টাকা জমা দিন (bKash / Nagad / QR)</span>
+                                <span class="qa-pay-arrow">→</span>
+                            </button>
                         </div>
 
                         <!-- ===== FEATURE 5: MEAL RATE TRANSPARENCY ===== -->
@@ -724,13 +728,27 @@
 
                         <div class="manager-section">
                             <div class="setting">
-                                <div class="setting-text"><strong>৭.১ bKash/Nagad পেমেন্ট সেটআপ</strong><span>মেম্বাররা এই নম্বরে টাকা পাঠাবে</span></div>
+                                <div class="setting-text"><strong>৭.১ bKash/Nagad পেমেন্ট ও QR সেটআপ</strong><span>মেম্বাররা এই নম্বর বা QR কোড স্ক্যান করে টাকা পাঠাবে</span></div>
                             </div>
                             <label style="font-size:12px;color:var(--muted)">বিকাশ নম্বর</label>
                             <input id="bkashNumberInput" type="tel" placeholder="01XXXXXXXXX">
-                            <label style="font-size:12px;color:var(--muted);margin-top:8px">নগদ নম্বর</label>
+                            <label style="font-size:12px;color:var(--muted);margin-top:8px">বিকাশ QR Code ছবি (ঐচ্ছিক — না দিলে নম্বর থেকে অটো QR তৈরি হবে)</label>
+                            <div class="qr-upload-row">
+                                <input id="bkashQrInput" type="file" accept="image/*" onchange="handleQrUpload('bkash', event)">
+                                <button type="button" class="btn btn-light qr-clear-btn" onclick="clearQrImage('bkash')">মুছুন</button>
+                            </div>
+                            <img id="bkashQrPreview" class="qr-admin-preview hidden" alt="bKash QR Preview">
+
+                            <label style="font-size:12px;color:var(--muted);margin-top:10px">নগদ নম্বর</label>
                             <input id="nagadNumberInput" type="tel" placeholder="01XXXXXXXXX">
-                            <label style="font-size:12px;color:var(--muted);margin-top:8px">আজকের বাজার কার?</label>
+                            <label style="font-size:12px;color:var(--muted);margin-top:8px">নগদ QR Code ছবি (ঐচ্ছিক)</label>
+                            <div class="qr-upload-row">
+                                <input id="nagadQrInput" type="file" accept="image/*" onchange="handleQrUpload('nagad', event)">
+                                <button type="button" class="btn btn-light qr-clear-btn" onclick="clearQrImage('nagad')">মুছুন</button>
+                            </div>
+                            <img id="nagadQrPreview" class="qr-admin-preview hidden" alt="Nagad QR Preview">
+
+                            <label style="font-size:12px;color:var(--muted);margin-top:10px">আজকের বাজার কার?</label>
                             <select id="bazaarDutySelect"></select>
                             <button class="btn btn-primary" style="margin-top:10px" onclick="savePaymentSettings()">💾 পেমেন্ট সেটিংস সেভ করুন</button>
                         </div>
@@ -1052,6 +1070,10 @@
                     <span class="pay-service-icon" id="payServiceIcon">🟪</span>
                     <span class="pay-number" id="payNumber">সেট করা হয়নি</span>
                     <button class="pay-copy-btn" onclick="copyPaymentNumber()">📋 Copy</button>
+                </div>
+                <div id="payQrWrap" class="pay-qr-wrap hidden">
+                    <img id="payQrImg" class="pay-qr-img" alt="Payment QR Code">
+                    <div id="payQrHint" class="pay-qr-hint">📷 QR কোড স্ক্যান করে টাকা পাঠান</div>
                 </div>
             </div>
             <div class="payment-form">

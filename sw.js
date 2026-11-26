@@ -1,4 +1,4 @@
-const CACHE_NAME = "hisab-v1";
+const CACHE_NAME = "hisab-v3";
 const STATIC_ASSETS = [
   "./",
   "./index.html",
@@ -6,6 +6,7 @@ const STATIC_ASSETS = [
   "./app.js",
   "./lang.js",
   "./firebase-config.js",
+  "./emailjs-config.js",
   "./manifest.json"
 ];
 
@@ -34,27 +35,29 @@ self.addEventListener("activate", function (event) {
 });
 
 self.addEventListener("fetch", function (event) {
-  // Only cache GET requests and non-firebase/API requests
-  if (event.request.method !== "GET" || event.request.url.includes("firestore.googleapis.com") || event.request.url.includes("identitytoolkit.googleapis.com")) {
+  // Only handle GET requests and skip Firebase/external APIs
+  if (
+    event.request.method !== "GET" ||
+    event.request.url.includes("firestore.googleapis.com") ||
+    event.request.url.includes("identitytoolkit.googleapis.com")
+  ) {
     return;
   }
 
+  // Network-First strategy: always fetch latest updates when online, fallback to cache offline
   event.respondWith(
-    caches.match(event.request).then(function (cached) {
-      return (
-        cached ||
-        fetch(event.request).then(function (networkResponse) {
-          if (networkResponse && networkResponse.status === 200) {
-            const responseClone = networkResponse.clone();
-            caches.open(CACHE_NAME).then(function (cache) {
-              cache.put(event.request, responseClone);
-            });
-          }
-          return networkResponse;
-        }).catch(function () {
-          return cached;
-        })
-      );
-    })
+    fetch(event.request)
+      .then(function (networkResponse) {
+        if (networkResponse && networkResponse.status === 200) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then(function (cache) {
+            cache.put(event.request, responseClone);
+          });
+        }
+        return networkResponse;
+      })
+      .catch(function () {
+        return caches.match(event.request);
+      })
   );
 });
