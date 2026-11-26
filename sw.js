@@ -1,4 +1,4 @@
-const CACHE_NAME = "hisab-v3";
+const CACHE_NAME = "hisab-v4";
 const STATIC_ASSETS = [
   "./",
   "./index.html",
